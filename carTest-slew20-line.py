@@ -66,7 +66,7 @@ class SimulationAssignment():
     # A more accurate approach would be to implement servo slew limiting.
     car.set_steering_limit(30)
   
-  def control_loop(self, vr: Any, car: Car, wire: Tripwire, csvfile: Optional[Any]=None, linecsv: Optional[Any]=None) -> float:
+  def control_loop(self, vr: Any, car: Car, wire: Tripwire, csvfile: Optional[Any]=None, linecsv: Optional[Any]=None) -> bool:
     """Control iteration. This is called on a regular basis.
     Args:
         vr -- VRepInterface object, which is an abstraction on top of the VREP
@@ -80,7 +80,7 @@ class SimulationAssignment():
     time = vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
     dt = time - self.last_sim_time
     self.last_sim_time = time
-    crossed = wire.get_distance()
+    crossed = wire.get_tripped()
 
     #
     # ASSIGNMENT: Tune / implement a better controller loop here.
@@ -154,7 +154,7 @@ class SimulationAssignment():
       linecsv.writerow({'time_ms':time,
                       'linescan_near':line_camera_image0, 
                       'velocity(m/s)':vel})
-    return crossed[0]  # tells me if i've crossed the line or not!  Do NOT delete this line.
+    return crossed  # tells me if i've crossed the line or not!  Do NOT delete this line.
   
 if __name__ == "__main__":
   import argparse
@@ -298,6 +298,3 @@ if __name__ == "__main__":
         # down gracefully. 
         print("KeyboardInterrupt: pausing simulation.")
         vr.simxPauseSimulation(vrep.simx_opmode_oneshot_wait)
-
-
-    

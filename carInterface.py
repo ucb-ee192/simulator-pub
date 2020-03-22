@@ -10,17 +10,17 @@ class Tripwire(object):
   def __init__(self, vrep_interface: Any, name: str='Proximity_sensor') -> None:
     self.vr = vrep_interface
     self.handle = self.vr.simxGetObjectHandle(name, 
-                                                  vrep.simx_opmode_oneshot_wait)
+                                              vrep.simx_opmode_oneshot_wait)
     
     self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_streaming)
 
-  def get_distance(self) -> float:
+  def get_tripped(self) -> bool:
     """Returns the distance that the sensor sees
     """
     # boolean detectionState, array detectedPoint,
     # number detectedObjectHandle, array detectedSurfaceNormalVector
     # Specify -1 to retrieve the absolute position.
-    return self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_buffer)
+    return self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_buffer)[0]
 
 
 class Car(object):
@@ -67,6 +67,7 @@ class Car(object):
     self.steering_state = 0.0
     self.old_lat_err = 0.0
     self.int_err = 0.0  # integral error
+
   # 
   # Some helper functions to get/set important car data/state
   #
@@ -149,7 +150,7 @@ class Car(object):
         self.steering_state = angle # update state
         self.vr.simxSetFloatSignal('steerAngle', angle*(math.pi/180.0), 
                                vrep.simx_opmode_oneshot)
-        return(angle) # can reach angle in single time step
+        return angle # can reach angle in single time step
     
     if (angle_cmd > self.steering_state +1):    # add some dead band
         angle = self.steering_state + dt * self.steering_slew_rate
@@ -160,7 +161,7 @@ class Car(object):
     self.steering_state = angle  # update state
     self.vr.simxSetFloatSignal('steerAngle', angle*(math.pi/180.0), 
                                vrep.simx_opmode_oneshot)
-    return(angle)
+    return angle
 
   def set_boom_sensor_offset(self, boom_length: float) -> None:
     """Sets the car's boom sensor's offset (approximate distance from front of
