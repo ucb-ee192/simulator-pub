@@ -7,7 +7,7 @@ import vrep  # type: ignore
 class Tripwire(object):
   """Abstraction object for the tripwire, providing intuitive functions for the timer flag
   """
-  def __init__(self, vrep_interface: Any, name: str='Proximity_sensor') -> None:
+  def __init__(self, vrep_interface: Any, name: str = 'Proximity_sensor') -> None:
     self.vr = vrep_interface
     self.handle = self.vr.simxGetObjectHandle(name, 
                                               vrep.simx_opmode_oneshot_wait)
@@ -27,7 +27,7 @@ class Car(object):
   """Abstraction object for the car, providing intuitive functions for getting
   car state and setting outputs.
   """
-  def __init__(self, vrep_interface: Any, name: str='AckermannSteeringCar') -> None:
+  def __init__(self, vrep_interface: Any, name: str = 'AckermannSteeringCar') -> None:
     self.vr = vrep_interface
     self.car_handle = self.vr.simxGetObjectHandle(name, 
                                                   vrep.simx_opmode_oneshot_wait)
@@ -109,7 +109,7 @@ class Car(object):
         image[i] = 256 + intensity
     return image
 
-  def set_speed(self, speed: float, blocking: bool=False) -> None:
+  def set_speed(self, speed: float, blocking: bool = False) -> None:
     """Sets the car's target speed in m/s. Subject to acceleration limiting in 
     the simulator.
     """
@@ -174,8 +174,8 @@ class Car(object):
                                   (0, 0, -(boom_length-0.35)),
                                   vrep.simx_opmode_oneshot_wait)
 
-  def set_line_camera_parameters(self, camera_index: int, height: float=0.3,
-                                 orientation: float=30, fov: float=120) -> None:
+  def set_line_camera_parameters(self, camera_index: int, height: float = 0.3,
+                                 orientation: float = 30, fov: float = 120) -> None:
     """Sets the car's line camera parameters.
     This is provided so you don't have to learn how to mess with the V-REP
     scene to tune your camera parameters.

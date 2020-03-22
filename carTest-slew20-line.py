@@ -43,7 +43,6 @@ class SimulationAssignment():
         weighted_sum += i
         element_sum += 1
     if element_sum == 0:
-      #return None
       return 0
     return weighted_sum / element_sum - 63
   
