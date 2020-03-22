@@ -132,7 +132,7 @@ class SimulationAssignment():
     
     # Print out debugging info
     # lat_err = car.get_lateral_error() # actual distance rather than camera estimate
-   # lateral error seems broken compared to camera
+    # lateral error seems broken compared to camera
     pos = car.get_position()
     vel = car.get_velocity()
     vel = math.sqrt(vel[0]**2 + vel[1]**2 + vel[2]**2)
@@ -174,10 +174,10 @@ if __name__ == "__main__":
                       help='overwrite the specified csvfile without warning')
   parser.add_argument('--oneLoop', metavar='l',default = True,
                       help="""Run the car through only one round of the track, based on the tripwire.  Defaults to False.""")
-  parser.add_argument('--constants', metavar = 'k', nargs = "+", default = None, type = float,
+  parser.add_argument('--constants', metavar='k', nargs="+", default=None, type=float,
                        help="""A list (of airbitrary length) of contants.  Useful for PID tuning, for example""")
-  parser.add_argument('--velocity', metavar = 'v', type = float, default = 2.5,
-                     help="""Set the Velocity, in m/s.  Default, 3.0""")
+  parser.add_argument('--velocity', metavar='v', type=float, default=2.5,
+                     help="""Set the Velocity, in m/s.""")
   args = parser.parse_args()
   
 
