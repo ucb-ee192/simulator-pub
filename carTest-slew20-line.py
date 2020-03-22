@@ -1,25 +1,27 @@
 # modifications by Doug from Spring 2016 using single loop
 # modified Spring 2018 to handle angle and rate limits for steering servo
+from typing import Any, List, Optional, Union, TextIO, BinaryIO
+
 import csv
 import math
 import os.path
 import sys
 import time
-import numpy as np
-import vrep
-import vrepInterface
+import numpy as np  # type: ignore
+import vrep  # type: ignore
+import vrepInterface  # type: ignore
 from carInterface import Car, Tripwire
 
 
 class SimulationAssignment():
   """Everything you need to implement for the assignment is here.
   You may """
-  def __init__(self, vr, car, wire):
+  def __init__(self, vr: Any, car: Car, wire: Tripwire) -> None:
     # You may initialize additional state variables here
     self.last_sim_time = vr.simxGetFloatSignal('simTime', 
                                                vrep.simx_opmode_oneshot_wait)
   
-  def get_line_camera_error(self, image):
+  def get_line_camera_error(self, image: List[int]) -> float:
     """Returns the distance from the line, as seen by the line camera, in 
     pixels. The actual physical distance (in meters) can be derived with some
     trig given the camera parameters.
@@ -45,7 +47,7 @@ class SimulationAssignment():
       return 0
     return weighted_sum / element_sum - 63
   
-  def setup_car(self, vr, car):
+  def setup_car(self, vr: Any, car: Car) -> None:
     """Sets up the car's physical parameters.
     """
     #
@@ -64,7 +66,7 @@ class SimulationAssignment():
     # A more accurate approach would be to implement servo slew limiting.
     car.set_steering_limit(30)
   
-  def control_loop(self, vr, car, wire, csvfile=None, linecsv=None):
+  def control_loop(self, vr: Any, car: Car, wire: Tripwire, csvfile: Optional[Any]=None, linecsv: Optional[Any]=None) -> float:
     """Control iteration. This is called on a regular basis.
     Args:
         vr -- VRepInterface object, which is an abstraction on top of the VREP
@@ -134,8 +136,8 @@ class SimulationAssignment():
     # lat_err = car.get_lateral_error() # actual distance rather than camera estimate
     # lateral error seems broken compared to camera
     pos = car.get_position()
-    vel = car.get_velocity()
-    vel = math.sqrt(vel[0]**2 + vel[1]**2 + vel[2]**2)
+    vel_vector = car.get_velocity()
+    vel = math.sqrt(vel_vector[0]**2 + vel_vector[1]**2 + vel_vector[2]**2)
     print('t=%6.3f (x=%5.2f, y=%5.2f, sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%3.1f'
           % (time, pos[0], pos[1], vel, 
              lat_err, car.int_err, (line0_err or 0), steer_angle))
@@ -152,7 +154,7 @@ class SimulationAssignment():
       linecsv.writerow({'time_ms':time,
                       'linescan_near':line_camera_image0, 
                       'velocity(m/s)':vel})
-    return crossed[0] #tells me if i've crossed the line or not!  Do NOT delete this line.
+    return crossed[0]  # tells me if i've crossed the line or not!  Do NOT delete this line.
   
 if __name__ == "__main__":
   import argparse
@@ -217,7 +219,7 @@ if __name__ == "__main__":
     if args.csvfile:
       # Dirty hack to get this (potentially) working in Python 2 and 3
       if sys.version_info.major < 3:
-        outfile = open(args.csvfile, 'wb')
+        outfile: Union[TextIO, BinaryIO] = open(args.csvfile, 'wb')
       else:
         outfile = open(args.csvfile, 'w', newline='')
         
@@ -231,7 +233,7 @@ if __name__ == "__main__":
       
       # setup csv file for line data
       if sys.version_info.major < 3:
-        linefile = open(args.linefile,'wb')
+        linefile: Union[TextIO, BinaryIO] = open(args.linefile,'wb')
       else:
         linefile = open(args.linefile,'w', newline='')
         
