@@ -308,7 +308,7 @@ class SimulationAssignment():
     
     
     # Proportional gain in steering control (degrees) / lateral error (meters)
-    kp = 400
+    kp = 200
     kd = 0 # deg per m/s
     ki = 0 # deg per m-s
     steer_angle = -kp * lat_err - kd*lat_vel - ki* car.int_err
@@ -323,8 +323,8 @@ class SimulationAssignment():
     
     # Constant speed for now. You can tune this and/or implement advanced
     # controllers.
-    # car.set_speed(ve)
-    car.set_speed(2.0)
+    car.set_speed(ve)
+    #car.set_speed(2.0)
     
     # Print out debugging info
     # lat_err = car.get_lateral_error() # actual distance rather than camera estimate
@@ -424,10 +424,7 @@ if __name__ == "__main__":
       csvfile = csv.DictWriter(outfile, fieldnames=fieldnames)  # change so don't over write orig file object!
       csvfile.writerow(fielddict)
     # setup csv file for line data
-    if sys.version_info.major < 3:
-      linefile = open(args.linefile,'wb')
-    else:
-      linefile = open(args.linefile,'w', newline='')
+    linefile = open(args.linefile,'wb')
     fieldnames = ['time_ms', 'linescan_near', 'velocity(m/s)']
     linecsv = csv.DictWriter(linefile, fieldnames=fieldnames)
     linecsv.writeheader()
