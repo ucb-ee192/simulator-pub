@@ -33,27 +33,70 @@ import os
 import ctypes as ct
 from vrepConst import *
 
+#
+# Begin ee192 modification to autodetect library install location
+#
+
 #load library
 libsimx = None
+
+vrep_install_candidates = []
+lib_subpath = None
+file_extension = None
+traceback = []
+
 try:
-    file_extension = '.so'
-    if platform.system() =='cli':
-        file_extension = '.dll'
-    elif platform.system() =='Windows':
-        file_extension = '.dll'
-    elif platform.system() == 'Darwin':
-        file_extension = '.dylib'
+  if platform.system() == 'Windows':
+    vrep_install_candidates.extend([
+      'C:/Program Files/V-REP3/V-REP_PRO_EDU'
+    ])
+    if ct.sizeof(ct.c_voidp) == 4:  # needs to be the bitwidth of the Python interpreter
+      traceback.append("- detected Windows with 32-bit Python")
+      lib_subpath = 'programming/remoteApiBindings/lib/lib/Windows/32Bit'
+    elif ct.sizeof(ct.c_voidp) == 8:
+      traceback.append("- detected Windows with 64-bit Python")
+      lib_subpath = 'programming/remoteApiBindings/lib/lib/Windows/64Bit'
     else:
-        file_extension = '.so'
-    libfullpath = os.path.join(os.path.dirname(__file__), 'remoteApi' + file_extension)
-    libsimx = ct.CDLL(libfullpath)
-except:
-    print ('----------------------------------------------------')
-    print ('The remoteApi library could not be loaded. Make sure')
-    print ('it is located in the same folder as "vrep.py", or')
-    print ('appropriately adjust the file "vrep.py"')
-    print ('----------------------------------------------------')
-    print ('')
+      traceback.append("- detected Windows with uknown-bits Python")
+    file_extension = '.dll'
+  elif platform.system() == 'Darwin':
+    traceback.append("- detected Mac")
+    lib_subpath = 'programming/remoteApiBindings/lib/lib/Mac'
+    file_extension = '.dylib'
+  elif platform.system() == 'Linux':
+    traceback.append("- detected Linux")
+    vrep_install_candidates.extend([
+      '/V-REP_PRO_EDU_V3_2_0'
+    ])
+    lib_subpath = 'programming/remoteApiBindings/lib/lib/Linux/64Bit'  # TODO is there no 32-bit version?
+    file_extension = '.so'
+  else:
+    raise ValueError("uknown platform: " + platform.system())
+
+  candidate_dirs = [
+    os.path.join(os.path.dirname(__file__))
+  ]
+  for vrep_install_candidate in vrep_install_candidates:
+    candidate_dirs.append(os.path.join(vrep_install_candidate, lib_subpath))
+
+  filename = 'remoteApi' + file_extension
+  candidates = [os.path.join(candidate_dir, filename) for candidate_dir in candidate_dirs]
+
+  for candidate in candidates:
+    if os.path.exists(candidate):
+      traceback.append('- found and trying shared library: ' + candidate)
+      libsimx = ct.CDLL(candidate)
+    else:
+      traceback.append('- did not find shared library in: ' + candidate)
+
+except BaseException as e:
+  raise FileNotFoundError("error while attempting to load shared library: " + repr(e) +
+                          "\nLog:\n" + '\n'.join(traceback))
+
+#
+# End ee192 modifications
+#
+
 
 #ctypes wrapper prototypes 
 c_GetJointPosition          = ct.CFUNCTYPE(ct.c_int32,ct.c_int32, ct.c_int32, ct.POINTER(ct.c_float), ct.c_int32)(("simxGetJointPosition", libsimx))
