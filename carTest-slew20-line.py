@@ -8,25 +8,7 @@ import time
 import numpy as np
 import vrep
 import vrepInterface
-from carInterface import Car
-
-class tripwire(object):
-  """Abstraction object for the tripwire, providing intuitive functions for the timer flag
-  """
-  def __init__(self, vrep_interface, name='Proximity_sensor'):
-    self.vr = vrep_interface
-    self.handle = self.vr.simxGetObjectHandle(name, 
-                                                  vrep.simx_opmode_oneshot_wait)
-    
-    self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_streaming)
-
-  def get_distance(self):
-    """Returns the distance that the sensor sees
-    """
-    # boolean detectionState, array detectedPoint,
-    # number detectedObjectHandle, array detectedSurfaceNormalVector
-    # Specify -1 to retrieve the absolute position.
-    return self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_buffer)
+from carInterface import Car, Tripwire
 
 
 class SimulationAssignment():
@@ -226,7 +208,7 @@ if __name__ == "__main__":
     vr.simxStartSimulation(vrep.simx_opmode_oneshot_wait)
     
     car = Car(vr)
-    wire = tripwire(vr)
+    wire = Tripwire(vr)
     assignment = SimulationAssignment(vr, car, wire) #give it the tripwire, too
     assignment.setup_car(vr, car)
     
@@ -303,7 +285,7 @@ if __name__ == "__main__":
             
         print("Finished one loop: ending simulation." )
         vr.simxStopSimulation(vrep.simx_opmode_oneshot_wait)
-# need to have clean file close
+        # need to have clean file close
         outfile.close()   # close file and writer
         linefile.close()  # close line writing
         print("files closed")

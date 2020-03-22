@@ -2,6 +2,26 @@ import math
 import time
 import vrep
 
+
+class Tripwire(object):
+  """Abstraction object for the tripwire, providing intuitive functions for the timer flag
+  """
+  def __init__(self, vrep_interface, name='Proximity_sensor'):
+    self.vr = vrep_interface
+    self.handle = self.vr.simxGetObjectHandle(name, 
+                                                  vrep.simx_opmode_oneshot_wait)
+    
+    self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_streaming)
+
+  def get_distance(self):
+    """Returns the distance that the sensor sees
+    """
+    # boolean detectionState, array detectedPoint,
+    # number detectedObjectHandle, array detectedSurfaceNormalVector
+    # Specify -1 to retrieve the absolute position.
+    return self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_buffer)
+
+
 class Car(object):
   """Abstraction object for the car, providing intuitive functions for getting
   car state and setting outputs.
