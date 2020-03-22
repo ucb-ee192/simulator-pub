@@ -141,7 +141,8 @@ class SimulationAssignment():
              lat_err, car.int_err, (line0_err or 0), steer_angle))
   
     if csvfile is not None:
-      csvfile.writerow({'t': time, 'x': pos[0], 'y': pos[1], 'speed': vel,
+      csvfile.writerow({'t': time, 
+                        'x': pos[0], 'y': pos[1], 'speed': vel,
                         'lat_err': lat_err, 
                         'line0_err': (line0_err or ""), 
                         'line1_err': (line1_err or ""), 
