@@ -60,16 +60,18 @@ class Car(object):
     self.steering_slew_rate = 600/0.16 # depends on servo 600 degrees in 160 ms
     self.steering_slew_rate = 1200.0 # should be degrees per second
     #self.steering_slew_rate = 60/0.16 # depends on servo 60 degrees in 160 ms
-    self.steering_time_ms = self.get_time()
     
     # state variables
     self.steering_state = 0.0
-    self.old_lat_err = 0.0
-    self.int_err = 0.0  # integral error
 
   # 
   # Some helper functions to get/set important car data/state
   #
+  def get_sim_time(self) -> float:
+    """Returns the current simulation time in seconds.
+    """
+    return self.vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
+
   def get_position(self) -> Tuple[float, float, float]:
     """Returns the car's absolute position as a 3-tuple of (x, y, z), in meters.
     """
@@ -117,9 +119,6 @@ class Car(object):
     else:
       op_mode = vrep.simx_opmode_oneshot
     self.vr.simxSetFloatSignal('xSpeed', speed*self.speed_factor, op_mode)
-
-  def get_time(self) -> int:  # gets time in Ms since the epoch.
-    return int(round(time.time() * 1000))  # time in milli seconds.
 
   def set_steering_fast(self, angle_cmd: float, dt: float) -> float:
     """Sets the car's steering angle in degrees.

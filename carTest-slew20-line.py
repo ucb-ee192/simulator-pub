@@ -16,9 +16,14 @@ from simpleCsvDict import SimpleCsvDictWriter
 class SimulationAssignment():
   """Everything you need to implement for the assignment is here.
   You may """
-  def __init__(self, vr: Any, car: Car) -> None:
+  def __init__(self, vr: Any, car: Car, target_speed: float) -> None:
     # You may initialize additional state variables here
     self.last_sim_time = vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
+
+    self.target_speed = target_speed
+
+    self.old_lat_err = 0.0
+    self.int_err = 0.0  # integral error
 
   def setup_car(self, vr: Any, car: Car) -> None:
     """Sets up the car's physical parameters.
@@ -71,13 +76,11 @@ class SimulationAssignment():
               Python API. See the class docstring near the top of this file.
         car -- Car object, providing abstractions for the car (like steering and
                velocity control).
-        csvfile -- Optional csv.DictWriter for logging data. None to disable.
-        linecsv -- Optional csv.DictWriter for line camera. None to disable.
+        csvfile -- Optional to log data. None to disable.
     """
-    # Waiting mode is used here to 
-    time = vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
-    dt = time - self.last_sim_time
-    self.last_sim_time = time
+    sim_time = car.get_sim_time()
+    dt = sim_time - self.last_sim_time
+    self.last_sim_time = sim_time
 
     #
     # ASSIGNMENT: Tune / implement a better controller loop here.
@@ -93,52 +96,42 @@ class SimulationAssignment():
     line0_err = self.get_line_camera_error(line_camera_image0)
     line1_err = self.get_line_camera_error(line_camera_image1)
 
-    # lat_err = car.get_lateral_error()
+    # lat_err = self.get_lateral_error()
     # line camera has 0.7 m field of view
     lat_err = -(np.float(line0_err)/128)*0.7 # pixel to meter conversion
-    
-    #lat_err = car.get_lateral_error() # actual distance rather than camera estimate
+    # lat_err = car.get_lateral_error() # actual distance rather than camera estimate, might be broken
     
     if (dt > 0.0):
-      lat_vel = (lat_err - car.old_lat_err)/dt
+      lat_vel = (lat_err - self.old_lat_err)/dt
     else:
       lat_vel = 0.0
-    car.old_lat_err = lat_err
+    self.old_lat_err = lat_err
     
-    #calculate integral error    
-    car.int_err = car.int_err + dt*lat_err
+    # calculate integral error
+    self.int_err = self.int_err + dt*lat_err
 
     # Proportional gain in steering control (degrees) / lateral error (meters)
     kp = 200
     kd = 0 # deg per m/s
     ki = 0 # deg per m-s
-    steer_angle = -kp * lat_err - kd*lat_vel - ki* car.int_err
+    steer_angle = -kp * lat_err - kd * lat_vel - ki * self.int_err
+
+    steer_angle = car.set_steering(steer_angle, dt)  # use set_steering to include servo slew rate limit
+    # steer_angle = car.set_steering_fast(steer_angle,dt)  # use set_steering_fast for no delay
     
-    # use set_steering to include servo slew rate limit
-    steer_angle = car.set_steering(steer_angle,dt)
-    #steer_angle = car.set_steering_fast(steer_angle,dt)
-    #steer_angle = car.set_steering_fast(16,dt)  # check steering radius
-    
-    # use this function for no delay
-    # steer_angle = car.set_steering_fast(steer_angle,dt) 
-    
-    # Constant speed for now. You can tune this and/or implement advanced
-    # controllers.
-    car.set_speed(ve)
-    #car.set_speed(2.0)
-    
-    # Print out debugging info
-    # lat_err = car.get_lateral_error() # actual distance rather than camera estimate
-    # lateral error seems broken compared to camera
+    # Constant speed for now. You can tune this and/or implement advanced controllers.
+    car.set_speed(self.target_speed)
+
+    # Print out and record debugging info
     pos = car.get_position()
     vel_vector = car.get_velocity()
     vel = math.sqrt(vel_vector[0]**2 + vel_vector[1]**2 + vel_vector[2]**2)
     print('t=%6.3f (x=%5.2f, y=%5.2f, sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%3.1f'
-          % (time, pos[0], pos[1], vel, 
-             lat_err, car.int_err, (line0_err or 0), steer_angle))
+          % (sim_time, pos[0], pos[1], vel,
+             lat_err, self.int_err, (line0_err or 0), steer_angle))
   
     if csvfile is not None:
-      csvfile.writerow({'t': time,
+      csvfile.writerow({'t': sim_time,
                         'x': pos[0], 'y': pos[1],
                         'linescan': line_camera_image0,
                         'line_pos': line0_err + 63,  # needs to be in camera pixels so overlaid plots work
@@ -148,6 +141,7 @@ class SimulationAssignment():
                         'lat_err': lat_err,
                         'steer_angle': steer_angle,
                         })
+
 
 if __name__ == "__main__":
   import argparse
@@ -169,10 +163,6 @@ if __name__ == "__main__":
   parser.add_argument('--velocity', metavar='v', type=float, default=2.5,
                      help="""Set the Velocity, in m/s.""")
   args = parser.parse_args()
-  
-
-  ve = args.velocity
-
 
   # Check that we won't overwrite an existing csvfile before mucking with the
   # simulator.
@@ -208,7 +198,7 @@ if __name__ == "__main__":
         print("waiting for simulation start")
         time.sleep(1)
 
-    assignment = SimulationAssignment(vr, car)
+    assignment = SimulationAssignment(vr, car, args.velocity)
     assignment.setup_car(vr, car)
     
     csvfile = None
