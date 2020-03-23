@@ -96,12 +96,11 @@ class SimulationAssignment():
     line0_err = self.get_line_camera_error(line_camera_image0)
     line1_err = self.get_line_camera_error(line_camera_image1)
 
-    # lat_err = self.get_lateral_error()
     # line camera has 0.7 m field of view
     lat_err = -(np.float(line0_err)/128)*0.7 # pixel to meter conversion
-    # lat_err = car.get_lateral_error() # actual distance rather than camera estimate, might be broken
+    # lat_err = car.get_lateral_error()  # actual distance rather than camera estimate, might be broken
     
-    if (dt > 0.0):
+    if dt > 0.0:
       lat_vel = (lat_err - self.old_lat_err)/dt
     else:
       lat_vel = 0.0
