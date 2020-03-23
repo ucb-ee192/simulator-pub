@@ -9,8 +9,7 @@ class Tripwire(object):
   """
   def __init__(self, vrep_interface: Any, name: str = 'Proximity_sensor') -> None:
     self.vr = vrep_interface
-    self.handle = self.vr.simxGetObjectHandle(name, 
-                                              vrep.simx_opmode_oneshot_wait)
+    self.handle = self.vr.simxGetObjectHandle(name, vrep.simx_opmode_oneshot_wait)
     
     self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_streaming)
     self.last_state = False
@@ -33,15 +32,11 @@ class Car(object):
   """
   def __init__(self, vrep_interface: Any, name: str = 'AckermannSteeringCar') -> None:
     self.vr = vrep_interface
-    self.car_handle = self.vr.simxGetObjectHandle(name, 
-                                                  vrep.simx_opmode_oneshot_wait)
-    self.boom_handle = self.vr.simxGetObjectHandle('BoomSensor', 
-                                                   vrep.simx_opmode_oneshot_wait)
+    self.car_handle = self.vr.simxGetObjectHandle(name, vrep.simx_opmode_oneshot_wait)
+    self.boom_handle = self.vr.simxGetObjectHandle('BoomSensor', vrep.simx_opmode_oneshot_wait)
     self.camera_handle = []
-    self.camera_handle.append(self.vr.simxGetObjectHandle('LineCamera0', 
-                                                          vrep.simx_opmode_oneshot_wait))
-    self.camera_handle.append(self.vr.simxGetObjectHandle('LineCamera1', 
-                                                          vrep.simx_opmode_oneshot_wait))
+    self.camera_handle.append(self.vr.simxGetObjectHandle('LineCamera0', vrep.simx_opmode_oneshot_wait))
+    self.camera_handle.append(self.vr.simxGetObjectHandle('LineCamera1', vrep.simx_opmode_oneshot_wait))
 
     # Open these variables in streaming mode for high efficiency access.
     self.vr.simxGetObjectPosition(self.car_handle, -1, vrep.simx_opmode_streaming)

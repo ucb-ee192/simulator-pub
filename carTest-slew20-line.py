@@ -3,6 +3,7 @@
 from typing import Any, List, Optional
 
 import math
+import time
 import os.path
 import numpy as np  # type: ignore
 import vrep  # type: ignore
@@ -15,11 +16,29 @@ from simpleCsvDict import SimpleCsvDictWriter
 class SimulationAssignment():
   """Everything you need to implement for the assignment is here.
   You may """
-  def __init__(self, vr: Any, car: Car, wire: Tripwire) -> None:
+  def __init__(self, vr: Any, car: Car) -> None:
     # You may initialize additional state variables here
-    self.last_sim_time = vr.simxGetFloatSignal('simTime', 
-                                               vrep.simx_opmode_oneshot_wait)
-  
+    self.last_sim_time = vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
+
+  def setup_car(self, vr: Any, car: Car) -> None:
+    """Sets up the car's physical parameters.
+    """
+    #
+    # ASSIGNMENT: You may want to tune these paraneters.
+    #
+    car.set_boom_sensor_offset(0.1)
+    # In the scene, we provide two cameras.
+    # Camera 0 is used by default in the control loop and is the "near" one.
+    # Some teams have also used a "far" camera in the past (Camera 1).
+    # You can use additional cameras, but will have to add then in the V-REP scene
+    # and bind the handle in Car.__init__. The V-REP remote API doesn't provide a
+    # way to instantiate additional vision sensors.
+    car.set_line_camera_parameters(0, height=0.3, orientation=60, fov=90)
+    car.set_line_camera_parameters(1, height=0.4, orientation=15, fov=60)
+    # You should measure the steering servo limit and set it here.
+    # A more accurate approach would be to implement servo slew limiting.
+    car.set_steering_limit(30)
+
   def get_line_camera_error(self, image: List[int]) -> float:
     """Returns the distance from the line, as seen by the line camera, in 
     pixels. The actual physical distance (in meters) can be derived with some
@@ -44,25 +63,6 @@ class SimulationAssignment():
     if element_sum == 0:
       return 0
     return weighted_sum / element_sum - 63
-  
-  def setup_car(self, vr: Any, car: Car) -> None:
-    """Sets up the car's physical parameters.
-    """
-    #
-    # ASSIGNMENT: You may want to tune these paraneters.
-    #
-    car.set_boom_sensor_offset(0.1)
-    # In the scene, we provide two cameras.
-    # Camera 0 is used by default in the control loop and is the "near" one.
-    # Some teams have also used a "far" camera in the past (Camera 1).
-    # You can use additional cameras, but will have to add then in the V-REP scene
-    # and bind the handle in Car.__init__. The V-REP remote API doesn't provide a
-    # way to instantiate additional vision sensors.
-    car.set_line_camera_parameters(0, height=0.3, orientation=60, fov=90)
-    car.set_line_camera_parameters(1, height=0.4, orientation=15, fov=60)
-    # You should measure the steering servo limit and set it here.
-    # A more accurate approach would be to implement servo slew limiting.
-    car.set_steering_limit(30)
   
   def control_loop(self, vr: Any, car: Car, csvfile: Optional[SimpleCsvDictWriter]) -> None:
     """Control iteration. This is called on a regular basis.
@@ -180,26 +180,35 @@ if __name__ == "__main__":
       and not args.csvfile_overwrite):
     print("csvfile '%s' already exists: aborting." % args.csvfile)
     sys.exit()
-  
-  # Terminate any existing sessions, just in case.
-  vrep.simxFinish(-1)
-  
+
   # Stop the existing simulation if requested. Not using a separate
   # VRepInterface (and hence VREP API client id) seems to cause crashes.
   if args.restart:
     with vrepInterface.VRepInterface.open() as vr:
       vr.simxStopSimulation(vrep.simx_opmode_oneshot_wait)
-  
+
+  # This needs not be in the main body, or the API throws an exception a split second after simulation start.
+  with vrepInterface.VRepInterface.open() as vr:
+    ret = vr.simxStartSimulation(vrep.simx_opmode_oneshot_wait)
+
   # Open a V-REP API connection and get the car.
   with vrepInterface.VRepInterface.open() as vr:
     if args.synchronous:
       vr.simxSynchronous(1)
-      
-    vr.simxStartSimulation(vrep.simx_opmode_oneshot_wait)
-    
+
     car = Car(vr)
     wire = Tripwire(vr)
-    assignment = SimulationAssignment(vr, car, wire) #give it the tripwire, too
+
+    success = False
+    while not success:
+      try:
+        vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
+        success = True
+      except vrepInterface.VRepAPIError:
+        print("waiting for simulation start")
+        time.sleep(1)
+
+    assignment = SimulationAssignment(vr, car)
     assignment.setup_car(vr, car)
     
     csvfile = None
