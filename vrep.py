@@ -71,7 +71,12 @@ try:
     lib_subpath = 'programming/remoteApiBindings/lib/lib/Linux/64Bit'  # TODO is there no 32-bit version?
     file_extension = '.so'
   else:
-    raise ValueError("unknown platform: " + platform.system())
+    traceback.append("- unknown platform (" + platform.system() + "), falling back to Linux")
+    vrep_install_candidates.extend([
+        '/V-REP_PRO_EDU_V3_2_0'
+    ])
+    lib_subpath = 'programming/remoteApiBindings/lib/lib/Linux/64Bit'  # TODO is there no 32-bit version?
+    file_extension = '.so'
 
   candidate_dirs = [
     os.path.join(os.path.dirname(__file__))
