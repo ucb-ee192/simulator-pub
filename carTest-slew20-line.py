@@ -223,6 +223,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
       # Allow a keyboard interrupt to break out of the loop while still shutting
       # down gracefully.
+      print("caught keyboard interrupt, terminating control loop")
       pass
     finally:
       print("ending simulation")
