@@ -215,7 +215,7 @@ if __name__ == "__main__":
           completed_laps += 1
           if completed_laps > 0:  # discard the first finish line crossing, which happens at the start
             print("finished lap " + str(completed_laps))
-          if completed_laps >= args.laps:
+          if completed_laps >= args.laps and args.laps != 0:
             done = True
 
         if args.synchronous:
