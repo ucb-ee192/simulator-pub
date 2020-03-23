@@ -64,7 +64,7 @@ class SimulationAssignment():
     # A more accurate approach would be to implement servo slew limiting.
     car.set_steering_limit(30)
   
-  def control_loop(self, vr: Any, car: Car, wire: Tripwire, csvfile: Optional[BufferedCsvDictWriter]) -> bool:
+  def control_loop(self, vr: Any, car: Car, csvfile: Optional[BufferedCsvDictWriter]) -> None:
     """Control iteration. This is called on a regular basis.
     Args:
         vr -- VRepInterface object, which is an abstraction on top of the VREP
@@ -78,7 +78,6 @@ class SimulationAssignment():
     time = vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
     dt = time - self.last_sim_time
     self.last_sim_time = time
-    crossed = wire.get_tripped()
 
     #
     # ASSIGNMENT: Tune / implement a better controller loop here.
@@ -108,9 +107,7 @@ class SimulationAssignment():
     
     #calculate integral error    
     car.int_err = car.int_err + dt*lat_err
-    
-    
-    
+
     # Proportional gain in steering control (degrees) / lateral error (meters)
     kp = 200
     kd = 0 # deg per m/s
@@ -144,7 +141,7 @@ class SimulationAssignment():
       csvfile.writerow({'t': time,
                         'x': pos[0], 'y': pos[1],
                         'linescan': line_camera_image0,
-                        'line_pos': line0_err + 63,
+                        'line_pos': line0_err + 63,  # needs to be in camera pixels so overlaid plots work
                         'linescan_far': line_camera_image1,
                         'line_pos_far': line1_err + 63,
                         'speed': vel,
@@ -152,13 +149,9 @@ class SimulationAssignment():
                         'steer_angle': steer_angle,
                         })
 
-    return crossed  # tells me if i've crossed the line or not!  Do NOT delete this line.
-  
 if __name__ == "__main__":
   import argparse
   parser = argparse.ArgumentParser(description='ee192 Python V-REP Car controller.')
-  parser.add_argument('--iterations', metavar='iteration', type=int, default=300,
-                      help='number of control iterations to run')
   parser.add_argument('--synchronous', metavar='s', type=bool, default=True,
                       help="""enable synchronous mode, forcing the simulator to 
                       operate in lockstep with the simulator - potentially 
@@ -171,10 +164,8 @@ if __name__ == "__main__":
                       help='csv filename to log to')
   parser.add_argument('--csvfile_overwrite', metavar='csvfile_overwrite', type=bool, default=True,
                       help='overwrite the specified csvfile without warning')
-  parser.add_argument('--oneLoop', metavar='l',default = True,
-                      help="""Run the car through only one round of the track, based on the tripwire.  Defaults to False.""")
-  parser.add_argument('--constants', metavar='k', nargs="+", default=None, type=float,
-                       help="""A list (of airbitrary length) of contants.  Useful for PID tuning, for example""")
+  parser.add_argument('--laps', metavar='l', type=int, default=1,
+                      help="""Number of laps to run, default of 1. 0 means infinite.""")
   parser.add_argument('--velocity', metavar='v', type=float, default=2.5,
                      help="""Set the Velocity, in m/s.""")
   args = parser.parse_args()
@@ -214,63 +205,30 @@ if __name__ == "__main__":
     csvfile = None
     if args.csvfile:
       csvfile = BufferedCsvDictWriter(args.csvfile)
-    
-    if not args.oneLoop:
-      try:
-        for i in range(0, args.iterations):
-    
-          assignment.control_loop(vr, car, wire, csvfile)
-          
-          # Advance to the next frame
-          if args.synchronous:
-            vr.simxSynchronousTrigger()
-            
-        print("Finished %i control iterations: pausing simulation." 
-              % args.iterations)
-        vr.simxPauseSimulation(vrep.simx_opmode_oneshot_wait)
-        # need to have clean file close
-        if csvfile is not None:
-          csvfile.close()   # close file and writer
-          print("files closed")
-      except KeyboardInterrupt:
+
+    try:
+      done = False
+      completed_laps = -1
+      while not done:
+        assignment.control_loop(vr, car, csvfile)
+        finish_tripped = wire.check_tripped()
+        if finish_tripped:
+          completed_laps += 1
+          if completed_laps > 0:  # discard the first finish line crossing, which happens at the start
+            print("finished lap " + str(completed_laps))
+          if completed_laps >= args.laps:
+            done = True
+
+        if args.synchronous:
+          vr.simxSynchronousTrigger()
+    except KeyboardInterrupt:
       # Allow a keyboard interrupt to break out of the loop while still shutting
-      # down gracefully. 
-        print("KeyboardInterrupt: pausing simulation.")
-        vr.simxPauseSimulation(vrep.simx_opmode_oneshot_wait)
-      finally:
-        if csvfile is not None:
-          csvfile.close()   # close file and writer
-          print("files closed")
+      # down gracefully.
+      pass
+    finally:
+      print("ending simulation")
+      vr.simxStopSimulation(vrep.simx_opmode_oneshot_wait)
 
-    else:
-      try:
-        keepGoing = True
-        count = 0
-        oldCrossed = False;
-        while keepGoing:
-          crossed = assignment.control_loop(vr, car, wire, csvfile)
-          if (oldCrossed == False) and (crossed == True): #transition 0-> 1!
-              oldCrossed = True # on top of sensor
-              count = count + 1 # increase lap count on starting edge
-          if (oldCrossed == True) and (crossed == False): # transition 1 -> 0
-              oldCrossed = False # arm for next lap trigger
-
-          # Advance to the next frame
-          if args.synchronous:
-             vr.simxSynchronousTrigger()
-          if count == 2: #two lowToHigh Transitions.  First one is crossing the tripwire the first time (get a run-up on the speed).  Second is to stop.
-             keepGoing = False
-            
-        print("Finished one loop: ending simulation." )
-        vr.simxStopSimulation(vrep.simx_opmode_oneshot_wait)
-        # need to have clean file close
-        
-      except KeyboardInterrupt:
-        # Allow a keyboard interrupt to break out of the loop while still shutting
-        # down gracefully. 
-        print("KeyboardInterrupt: pausing simulation.")
-        vr.simxPauseSimulation(vrep.simx_opmode_oneshot_wait)
-      finally:
-        if csvfile is not None:
-          csvfile.close()   # close file and writer
-          print("files closed")
+      if csvfile is not None:
+        csvfile.close()   # close file and writer
+        print("csv files closed")

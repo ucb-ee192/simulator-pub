@@ -13,14 +13,18 @@ class Tripwire(object):
                                               vrep.simx_opmode_oneshot_wait)
     
     self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_streaming)
+    self.last_state = False
 
-  def get_tripped(self) -> bool:
-    """Returns the distance that the sensor sees
+  def check_tripped(self) -> bool:
+    """Returns true on a not tripped -> tripped transition. This must be called often enough to register the edge.
     """
     # boolean detectionState, array detectedPoint,
     # number detectedObjectHandle, array detectedSurfaceNormalVector
     # Specify -1 to retrieve the absolute position.
-    return self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_buffer)[0]
+    in_proximity = self.vr.simxReadProximitySensor(self.handle, vrep.simx_opmode_buffer)[0]
+    tripped = (not self.last_state and in_proximity)
+    self.last_state = in_proximity
+    return tripped
 
 
 class Car(object):
