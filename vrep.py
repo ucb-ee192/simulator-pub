@@ -71,7 +71,7 @@ try:
     lib_subpath = 'programming/remoteApiBindings/lib/lib/Linux/64Bit'  # TODO is there no 32-bit version?
     file_extension = '.so'
   else:
-    raise ValueError("uknown platform: " + platform.system())
+    raise ValueError("unknown platform: " + platform.system())
 
   candidate_dirs = [
     os.path.join(os.path.dirname(__file__))
