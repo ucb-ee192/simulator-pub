@@ -18,6 +18,10 @@ You may also add additional items to `csvfile.writerow` to dump more useful data
 1. By default, the simulation will run on lap and exit.
    You can change this by passing in `--laps` into `controller.py`, with `0` meaning infinite. 
 1. Data will be dumped by default in `car_data.csv`, which you can visualize (plot) using [log-visualizer.py in the telemetry repository](https://github.com/ucb-ee192/telemetry/blob/master/client-py/log-visualizer.py).
+   This invocation is a starting point assuming stock CSV output: `python log-visualizer.py --merge linescan,line_pos --merge linescan_far,line_pos_far --merge x,y car_data.csv`
+1. You can also plot the X-Y (car track) data using `xyplot.py`.
+   This invocation is a starting point assuming stock CSV output: `python xyplot.py car_data.csv`
+   This script an optional `-z` column name argument to color-code (using absolute value of the data) the plot, defaulting to `steer_angle`.
 
 
 ## Developer Resources
