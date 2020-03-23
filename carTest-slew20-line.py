@@ -9,7 +9,7 @@ import vrep  # type: ignore
 import vrepInterface  # type: ignore
 import sys
 from carInterface import Car, Tripwire
-from simpleCsvDict import BufferedCsvDictWriter
+from simpleCsvDict import SimpleCsvDictWriter
 
 
 class SimulationAssignment():
@@ -64,7 +64,7 @@ class SimulationAssignment():
     # A more accurate approach would be to implement servo slew limiting.
     car.set_steering_limit(30)
   
-  def control_loop(self, vr: Any, car: Car, csvfile: Optional[BufferedCsvDictWriter]) -> None:
+  def control_loop(self, vr: Any, car: Car, csvfile: Optional[SimpleCsvDictWriter]) -> None:
     """Control iteration. This is called on a regular basis.
     Args:
         vr -- VRepInterface object, which is an abstraction on top of the VREP
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     
     csvfile = None
     if args.csvfile:
-      csvfile = BufferedCsvDictWriter(args.csvfile)
+      csvfile = SimpleCsvDictWriter(args.csvfile)
 
     try:
       done = False
