@@ -1,16 +1,15 @@
 # modifications by Doug from Spring 2016 using single loop
 # modified Spring 2018 to handle angle and rate limits for steering servo
-from typing import Any, List, Optional, Union, TextIO, BinaryIO
+from typing import Any, List, Optional
 
-import csv
 import math
 import os.path
-import sys
-import time
 import numpy as np  # type: ignore
 import vrep  # type: ignore
 import vrepInterface  # type: ignore
+import sys
 from carInterface import Car, Tripwire
+from simpleCsvDict import BufferedCsvDictWriter
 
 
 class SimulationAssignment():
@@ -65,7 +64,7 @@ class SimulationAssignment():
     # A more accurate approach would be to implement servo slew limiting.
     car.set_steering_limit(30)
   
-  def control_loop(self, vr: Any, car: Car, wire: Tripwire, csvfile: Optional[Any]=None, linecsv: Optional[Any]=None) -> bool:
+  def control_loop(self, vr: Any, car: Car, wire: Tripwire, csvfile: Optional[BufferedCsvDictWriter]) -> bool:
     """Control iteration. This is called on a regular basis.
     Args:
         vr -- VRepInterface object, which is an abstraction on top of the VREP
@@ -90,21 +89,21 @@ class SimulationAssignment():
     # path-following and may jump at crossings.
     # The other uses a more realistic line sensor (in pixels), which you can
     # plug your track detection algorithm into.
-    #lat_err = car.get_lateral_error()
     line_camera_image0 = car.get_line_camera_image(0)
-    # line0_err = self.get_line_camera_error(car.get_line_camera_image(0))
+    line_camera_image1 = car.get_line_camera_image(1)
     line0_err = self.get_line_camera_error(line_camera_image0)
-    line1_err = self.get_line_camera_error(car.get_line_camera_image(1))
-    
+    line1_err = self.get_line_camera_error(line_camera_image1)
+
+    # lat_err = car.get_lateral_error()
     # line camera has 0.7 m field of view
     lat_err = -(np.float(line0_err)/128)*0.7 # pixel to meter conversion
     
     #lat_err = car.get_lateral_error() # actual distance rather than camera estimate
     
     if (dt > 0.0):
-        lat_vel = (lat_err - car.old_lat_err)/dt
+      lat_vel = (lat_err - car.old_lat_err)/dt
     else:
-            lat_vel = 0.0
+      lat_vel = 0.0
     car.old_lat_err = lat_err
     
     #calculate integral error    
@@ -142,17 +141,17 @@ class SimulationAssignment():
              lat_err, car.int_err, (line0_err or 0), steer_angle))
   
     if csvfile is not None:
-      csvfile.writerow({'t': time, 
-                        'x': pos[0], 'y': pos[1], 'speed': vel,
-                        'lat_err': lat_err, 
-                        'line0_err': (line0_err or ""), 
-                        'line1_err': (line1_err or ""), 
-                        'steer_angle': steer_angle
+      csvfile.writerow({'t': time,
+                        'x': pos[0], 'y': pos[1],
+                        'linescan': line_camera_image0,
+                        'line_pos': line0_err + 63,
+                        'linescan_far': line_camera_image1,
+                        'line_pos_far': line1_err + 63,
+                        'speed': vel,
+                        'lat_err': lat_err,
+                        'steer_angle': steer_angle,
                         })
-    if linecsv is not None:
-      linecsv.writerow({'time_ms':time,
-                      'linescan_near':line_camera_image0, 
-                      'velocity(m/s)':vel})
+
     return crossed  # tells me if i've crossed the line or not!  Do NOT delete this line.
   
 if __name__ == "__main__":
@@ -170,8 +169,6 @@ if __name__ == "__main__":
                       is currently running""")
   parser.add_argument('--csvfile', metavar='c', default='car_data.csv',
                       help='csv filename to log to')
-  parser.add_argument('--linefile', metavar='linefile', default='line_data.csv',
-                      help='line data filename to log to')
   parser.add_argument('--csvfile_overwrite', metavar='csvfile_overwrite', type=bool, default=True,
                       help='overwrite the specified csvfile without warning')
   parser.add_argument('--oneLoop', metavar='l',default = True,
@@ -216,38 +213,13 @@ if __name__ == "__main__":
     
     csvfile = None
     if args.csvfile:
-      # Dirty hack to get this (potentially) working in Python 2 and 3
-      if sys.version_info.major < 3:
-        outfile: Union[TextIO, BinaryIO] = open(args.csvfile, 'wb')
-      else:
-        outfile = open(args.csvfile, 'w', newline='')
-        
-      fieldnames = ['t', 'x', 'y', 'speed', 'lat_err', 'line0_err', 'line1_err', 
-                    'steer_angle']
-      fielddict = {}
-      for fieldname in fieldnames:
-        fielddict[fieldname] = fieldname
-      csvfile = csv.DictWriter(outfile, fieldnames=fieldnames)  # change so don't over write orig file object!
-      csvfile.writerow(fielddict)
-      
-      # setup csv file for line data
-      if sys.version_info.major < 3:
-        linefile: Union[TextIO, BinaryIO] = open(args.linefile,'wb')
-      else:
-        linefile = open(args.linefile,'w', newline='')
-        
-    
-    
-    fieldnames = ['time_ms', 'linescan_near', 'velocity(m/s)']
-    linecsv = csv.DictWriter(linefile, fieldnames=fieldnames)
-    linecsv.writeheader()
- 
+      csvfile = BufferedCsvDictWriter(args.csvfile)
     
     if not args.oneLoop:
       try:
         for i in range(0, args.iterations):
     
-          assignment.control_loop(vr, car, wire, csvfile, linecsv)
+          assignment.control_loop(vr, car, wire, csvfile)
           
           # Advance to the next frame
           if args.synchronous:
@@ -257,22 +229,26 @@ if __name__ == "__main__":
               % args.iterations)
         vr.simxPauseSimulation(vrep.simx_opmode_oneshot_wait)
         # need to have clean file close
-        outfile.close()   # close file and writer
-        linefile.close()  # close line writing
-        print("files closed")
+        if csvfile is not None:
+          csvfile.close()   # close file and writer
+          print("files closed")
       except KeyboardInterrupt:
       # Allow a keyboard interrupt to break out of the loop while still shutting
       # down gracefully. 
         print("KeyboardInterrupt: pausing simulation.")
         vr.simxPauseSimulation(vrep.simx_opmode_oneshot_wait)
+      finally:
+        if csvfile is not None:
+          csvfile.close()   # close file and writer
+          print("files closed")
+
     else:
       try:
         keepGoing = True
         count = 0
         oldCrossed = False;
         while keepGoing:
-          # crossed = assignment.control_loop(vr, car, wire, csvfile, linecsv)
-          crossed = assignment.control_loop(vr, car, wire, csvfile, linecsv)
+          crossed = assignment.control_loop(vr, car, wire, csvfile)
           if (oldCrossed == False) and (crossed == True): #transition 0-> 1!
               oldCrossed = True # on top of sensor
               count = count + 1 # increase lap count on starting edge
@@ -288,12 +264,13 @@ if __name__ == "__main__":
         print("Finished one loop: ending simulation." )
         vr.simxStopSimulation(vrep.simx_opmode_oneshot_wait)
         # need to have clean file close
-        outfile.close()   # close file and writer
-        linefile.close()  # close line writing
-        print("files closed")
         
       except KeyboardInterrupt:
         # Allow a keyboard interrupt to break out of the loop while still shutting
         # down gracefully. 
         print("KeyboardInterrupt: pausing simulation.")
         vr.simxPauseSimulation(vrep.simx_opmode_oneshot_wait)
+      finally:
+        if csvfile is not None:
+          csvfile.close()   # close file and writer
+          print("files closed")
