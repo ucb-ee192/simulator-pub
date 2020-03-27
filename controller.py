@@ -31,7 +31,7 @@ class SimulationAssignment():
     #
     # ASSIGNMENT: You may want to tune these paraneters.
     #
-    car.set_boom_sensor_offset(0.1)
+    # car.set_boom_sensor_offset(0.1)
     # In the scene, we provide two cameras.
     # Camera 0 is used by default in the control loop and is the "near" one.
     # Some teams have also used a "far" camera in the past (Camera 1).
@@ -98,7 +98,7 @@ class SimulationAssignment():
 
     # line camera has 0.7 m field of view
     lat_err = -(np.float(line0_err)/128)*0.7  # pixel to meter conversion
-    # lat_err = car.get_lateral_error()  # actual distance rather than camera estimate, might be broken
+   
     
     if dt > 0.0:
       lat_vel = (lat_err - self.old_lat_err)/dt
@@ -159,7 +159,7 @@ if __name__ == "__main__":
                       help='overwrite the specified csvfile without warning')
   parser.add_argument('--laps', metavar='l', type=int, default=1,
                       help="""Number of laps to run, default of 1. 0 means infinite.""")
-  parser.add_argument('--velocity', metavar='v', type=float, default=2.5,
+  parser.add_argument('--velocity', metavar='v', type=float, default=2.0,
                      help="""Set the Velocity, in m/s.""")
   args = parser.parse_args()
 

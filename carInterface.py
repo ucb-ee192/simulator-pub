@@ -33,7 +33,7 @@ class Car(object):
   def __init__(self, vrep_interface: Any, name: str = 'AckermannSteeringCar') -> None:
     self.vr = vrep_interface
     self.car_handle = self.vr.simxGetObjectHandle(name, vrep.simx_opmode_oneshot_wait)
-    self.boom_handle = self.vr.simxGetObjectHandle('BoomSensor', vrep.simx_opmode_oneshot_wait)
+ #   self.boom_handle = self.vr.simxGetObjectHandle('BoomSensor', vrep.simx_opmode_oneshot_wait)
     self.camera_handle = []
     self.camera_handle.append(self.vr.simxGetObjectHandle('LineCamera0', vrep.simx_opmode_oneshot_wait))
     self.camera_handle.append(self.vr.simxGetObjectHandle('LineCamera1', vrep.simx_opmode_oneshot_wait))
@@ -91,10 +91,10 @@ class Car(object):
     return math.degrees(self.vr.simxGetFloatSignal('steerAngle', 
                                                    vrep.simx_opmode_buffer))
 
-  def get_lateral_error(self) -> float:
+ # def get_lateral_error(self) -> float:
     """Returns the lateral error (distance from sensor to line) in meters.
     """
-    return self.vr.simxGetFloatSignal('yDist', vrep.simx_opmode_buffer)
+#    return self.vr.simxGetFloatSignal('yDist', vrep.simx_opmode_buffer)
   
   def get_line_camera_image(self, camera_index: int) -> List[int]:
     """Returns the line sensor image as an array of pixels, where each pixel is
@@ -161,16 +161,16 @@ class Car(object):
                                vrep.simx_opmode_oneshot)
     return angle
 
-  def set_boom_sensor_offset(self, boom_length: float) -> None:
+#  def set_boom_sensor_offset(self, boom_length: float) -> None:
     """Sets the car's boom sensor's offset (approximate distance from front of
     car, in meters).
     This is provided so you don't have to learn how to mess with the V-REP
     scene to tune your boom sensor parameters.
     NOTE: this doesn't update the graphical boom stick.
     """
-    self.vr.simxSetObjectPosition(self.boom_handle, vrep.sim_handle_parent, 
-                                  (0, 0, -(boom_length-0.35)),
-                                  vrep.simx_opmode_oneshot_wait)
+#    self.vr.simxSetObjectPosition(self.boom_handle, vrep.sim_handle_parent, 
+#                                 (0, 0, -(boom_length-0.35)),
+#                                  vrep.simx_opmode_oneshot_wait)
 
   def set_line_camera_parameters(self, camera_index: int, height: float = 0.3,
                                  orientation: float = 30, fov: float = 120) -> None:
