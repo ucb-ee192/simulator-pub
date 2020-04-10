@@ -61,19 +61,20 @@ try:
     file_extension = '.dll'
   elif platform.system() == 'Darwin':
     traceback.append("- detected Mac")
+    vrep_install_candidates.extend([
+      os.path.expanduser('~/V-REP_PRO_EDU_V3_6_2_Mac'),
+      os.path.expanduser('~/Downloads/V-REP_PRO_EDU_V3_6_2_Mac')
+    ])
     lib_subpath = 'programming/remoteApiBindings/lib/lib/Mac'
     file_extension = '.dylib'
-  elif platform.system() == 'Linux':
-    traceback.append("- detected Linux")
-    vrep_install_candidates.extend([
-      '/V-REP_PRO_EDU_V3_2_0'
-    ])
-    lib_subpath = 'programming/remoteApiBindings/lib/lib/Linux/64Bit'  # TODO is there no 32-bit version?
-    file_extension = '.so'
   else:
-    traceback.append("- unknown platform (" + platform.system() + "), falling back to Linux")
+    if platform.system() == 'Linux':
+      traceback.append("- detected Linux")
+    else:
+      traceback.append("- unknown platform (" + platform.system() + "), falling back to Linux")
     vrep_install_candidates.extend([
-        '/V-REP_PRO_EDU_V3_2_0'
+      os.path.expanduser('~/V-REP_PRO_EDU_V3_6_2_Ubuntu18_04'),
+      os.path.expanduser('~/Downloads/V-REP_PRO_EDU_V3_6_2_Ubuntu18_04')
     ])
     lib_subpath = 'programming/remoteApiBindings/lib/lib/Linux/64Bit'  # TODO is there no 32-bit version?
     file_extension = '.so'
@@ -93,6 +94,8 @@ try:
       libsimx = ct.CDLL(candidate)
     else:
       traceback.append('- did not find shared library in: ' + candidate)
+
+  assert libsimx is not None
 
 except BaseException as e:
   raise FileNotFoundError("error while attempting to load shared library: " + repr(e) +
