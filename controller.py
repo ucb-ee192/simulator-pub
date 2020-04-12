@@ -18,7 +18,7 @@ class SimulationAssignment():
   You may """
   def __init__(self, vr: Any, car: Car, target_speed: float) -> None:
     # You may initialize additional state variables here
-    self.last_sim_time = vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
+    self.last_sim_time = car.get_sim_time()
 
     self.target_speed = target_speed
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     success = False
     while not success:
       try:
-        vr.simxGetFloatSignal('simTime', vrep.simx_opmode_oneshot_wait)
+        car.get_sim_time()
         success = True
       except vrepInterface.VRepAPIError:
         print("waiting for simulation start")
