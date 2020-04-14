@@ -153,7 +153,7 @@ if __name__ == "__main__":
   parser.add_argument('--restart', metavar='r', type=bool, default=False,
                       help="""whether to restart the simulation if a simulation
                       is currently running""")
-  parser.add_argument('--csvfile', metavar='c', default='car_data.csv',
+  parser.add_argument('--csvfile', metavar='c', default='car_data',
                       help='csv filename to log to')
   parser.add_argument('--csvfile_overwrite', metavar='csvfile_overwrite', type=bool, default=True,
                       help='overwrite the specified csvfile without warning')
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     
     csvfile = None
     if args.csvfile:
-      csvfile = SimpleCsvDictWriter(args.csvfile)
+      csvfile = SimpleCsvDictWriter(args.csvfile + '_lap0.csv')
 
     try:
       done = False
@@ -222,6 +222,10 @@ if __name__ == "__main__":
           lap_start_time = car.get_sim_time()
           if completed_laps >= args.laps and args.laps != 0:
             done = True
+
+          if args.csvfile and csvfile is not None and not done:
+            csvfile.close()
+            csvfile = SimpleCsvDictWriter(args.csvfile + '_lap' + str(completed_laps + 1) + '.csv')
 
         if args.synchronous:
           vr.simxSynchronousTrigger()
