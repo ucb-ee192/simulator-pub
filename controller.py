@@ -125,10 +125,10 @@ class SimulationAssignment():
     pos = car.get_position()
     vel_vector = car.get_velocity()
     vel = math.sqrt(vel_vector[0]**2 + vel_vector[1]**2 + vel_vector[2]**2)
-    print('t=%6.3f (x=%5.2f, y=%5.2f, sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%3.1f'
-          % (sim_time, pos[0], pos[1], vel,
-             lat_err, self.int_err, (line0_err or 0), steer_angle))
-  
+    print('\rt=%6.2f (sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%5.1f'
+          % (sim_time, vel, lat_err, self.int_err, (line0_err or 0), steer_angle),
+          end='')
+
     if csvfile is not None:
       csvfile.writerow({'t': sim_time,
                         'x': pos[0], 'y': pos[1],
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     success = False
     while not success:
       try:
-        car.get_sim_time()
+        sim_start_time = car.get_sim_time()
         success = True
       except vrepInterface.VRepAPIError:
         print("waiting for simulation start")
@@ -207,13 +207,19 @@ if __name__ == "__main__":
     try:
       done = False
       completed_laps = -1
+      lap_start_time = -1.0
       while not done:
         assignment.control_loop(vr, car, csvfile)
         finish_tripped = wire.check_tripped()
         if finish_tripped:
           completed_laps += 1
           if completed_laps > 0:  # discard the first finish line crossing, which happens at the start
-            print("finished lap " + str(completed_laps))
+            print("\nfinished lap %i, lap time: %.2f, total elapsed time: %.2f" %
+                (completed_laps, car.get_sim_time() - lap_start_time, car.get_sim_time() - sim_start_time))
+          else:
+            print("\nstarted lap %i, total elapsed time: %.2f" %
+                (completed_laps + 1, car.get_sim_time() - sim_start_time))
+          lap_start_time = car.get_sim_time()
           if completed_laps >= args.laps and args.laps != 0:
             done = True
 
