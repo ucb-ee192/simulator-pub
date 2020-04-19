@@ -30,7 +30,7 @@ class Car(object):
   """Abstraction object for the car, providing intuitive functions for getting
   car state and setting outputs.
   """
-  def __init__(self, vrep_interface: Any, steering_limit: float = 30, steering_slew_rate: float = (60/0.016)) -> None:
+  def __init__(self, vrep_interface: Any, steering_limit: float = 30, steering_slew_rate: float = (60/0.16)) -> None:
     self.vr = vrep_interface
     self.car_handle = self.vr.simxGetObjectHandle('AckermannSteeringCar', vrep.simx_opmode_oneshot_wait)
     self.camera_handle = []
