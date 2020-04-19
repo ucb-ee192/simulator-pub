@@ -93,6 +93,7 @@ class Car(object):
     """
     return self.vr.simxGetObjectVelocity(self.car_handle, 
                                          vrep.simx_opmode_streaming)[0]
+
   def get_wheel_velocity(self) -> float:
     """ returns average of front wheel speeds. GetObjectVelocity returns lin vel,ang vel
     angular velocity vector in rad/sec
@@ -161,24 +162,10 @@ class Car(object):
     Steering angle rate limiting happens here.
     Returns the actual commanded angle.
     """
-    angle = self.steering_state  # get present angle
-    angle_err = angle_cmd - angle
-
-    # check if can reach angle in single time step?
-    # if so, then don't need slew rate limit
-    if (abs(angle_err) < dt*self.steering_slew_rate):
-      angle = min(angle_cmd, self.steering_limit)  # check saturation
-      angle = max(angle, -self.steering_limit)
-      self.steering_state = angle # update state
-      self._set_steering(angle)
-      return angle # can reach angle in single time step
-
-    if (angle_cmd > self.steering_state +1):    # add some dead band
-      angle = self.steering_state + dt * self.steering_slew_rate
-    if (angle_cmd < self.steering_state -1):
-      angle = self.steering_state - dt * self.steering_slew_rate
-    angle = min(angle, self.steering_limit)
-    angle = max(angle, -self.steering_limit)
+    max_angle_change = dt * self.steering_slew_rate
+    angle = max(min(angle_cmd, self.steering_state + max_angle_change),
+                self.steering_state - max_angle_change)
+    angle = max(min(angle, self.steering_limit), -self.steering_limit)
     self.steering_state = angle  # update state
     self._set_steering(angle)
     return angle

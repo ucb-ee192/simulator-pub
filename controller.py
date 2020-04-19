@@ -40,6 +40,7 @@ class SimulationAssignment():
     # way to instantiate additional vision sensors.
     car.set_line_camera_parameters(0, height=0.3, orientation=40, fov=90)
     car.set_line_camera_parameters(1, height=0.4, orientation=15, fov=60)
+
     # You should measure the steering servo limit and set it here.
     # A more accurate approach would be to implement servo slew limiting.
     car.set_steering_limit(30)
@@ -98,8 +99,7 @@ class SimulationAssignment():
 
     # line camera has 0.7 m field of view
     lat_err = -(np.float(line0_err)/128)*0.7  # pixel to meter conversion
-   
-    
+
     if dt > 0.0:
       lat_vel = (lat_err - self.old_lat_err)/dt
     else:
@@ -110,12 +110,12 @@ class SimulationAssignment():
     self.int_err = self.int_err + dt*lat_err
 
     # Proportional gain in steering control (degrees) / lateral error (meters)
-    kp = 200
-    kd = 20 # deg per m/s
-    ki = 0 # deg per m-s
-    steer_angle = -kp * lat_err - kd * lat_vel - ki * self.int_err
+    kp = 200  # deg per m
+    kd = 20  # deg per m/s
+    ki = 0  # deg per m-s
+    target_steer_angle = -kp * lat_err - kd * lat_vel - ki * self.int_err
 
-    steer_angle = car.set_steering(steer_angle, dt)  # use set_steering to include servo slew rate limit
+    steer_angle = car.set_steering(target_steer_angle, dt)  # use set_steering to include servo slew rate limit
     # steer_angle = car.set_steering_fast(steer_angle,dt)  # use set_steering_fast for no delay
     
     # Constant speed for now. You can tune this and/or implement advanced controllers.
@@ -130,16 +130,15 @@ class SimulationAssignment():
           end='')
 
     if csvfile is not None:
-      csvfile.writerow({'t': sim_time,
-                      #  'x': pos[0], 'y': pos[1],
-                        'linescan': line_camera_image0,
-                        'line_pos': line0_err + 63,  # needs to be in camera pixels so overlaid plots work
-                        # 'linescan_far': line_camera_image1,
-                        # 'line_pos_far': line1_err + 63,
-                        'speed': vel,
-                        'lat_err': lat_err,
-                        'steer_angle': steer_angle,
-                        })
+      csvfile.writerow({
+        't': sim_time,
+        'x': pos[0], 'y': pos[1],
+        'linescan': line_camera_image0,
+        'line_pos': line0_err + 63,  # needs to be in camera pixels so overlaid plots work
+        'speed': vel,
+        'lat_err': lat_err,
+        'steer_angle': steer_angle,
+      })
 
 
 if __name__ == "__main__":
@@ -161,7 +160,7 @@ if __name__ == "__main__":
                       help="""Number of laps to run, default of 1. 0 means infinite.""")
   parser.add_argument('--maxtime', metavar='maxtime', type=float, default=60.0,
                       help='number of control iterations to run')
-  parser.add_argument('--velocity', metavar='v', type=float, default=10.0,
+  parser.add_argument('--velocity', metavar='v', type=float, default=2.0,
                      help="""Set the Velocity, in m/s.""")
   args = parser.parse_args()
 
@@ -215,7 +214,7 @@ if __name__ == "__main__":
         finish_tripped = wire.check_tripped()
         if assignment.last_sim_time > args.maxtime:
             done = True
-            print("Exceeded maxtime. Simulation stopped.")
+            print("exceeded maxtime")
         if finish_tripped:
           completed_laps += 1
           if completed_laps > 0:  # discard the first finish line crossing, which happens at the start
