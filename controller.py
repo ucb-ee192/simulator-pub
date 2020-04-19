@@ -163,7 +163,7 @@ if __name__ == "__main__":
                       help="""Number of laps to run, default of 1. 0 means infinite.""")
   parser.add_argument('--maxtime', metavar='maxtime', type=float, default=60.0,
                       help='number of control iterations to run')
-  parser.add_argument('--velocity', metavar='v', type=float, default=10.0,
+  parser.add_argument('--velocity', metavar='v', type=float, default=1.0,
                      help="""Set the Velocity, in m/s.""")
   args = parser.parse_args()
 
