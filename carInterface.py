@@ -41,6 +41,8 @@ class Car(object):
     self.motor_fr_handle = self.vr.simxGetObjectHandle('FrontRightMotor', vrep.simx_opmode_oneshot_wait)
     self.vr.simxSetJointTargetVelocity(self.motor_fl_handle, 0, vrep.simx_opmode_oneshot_wait)
     self.vr.simxSetJointTargetVelocity(self.motor_fr_handle, 0, vrep.simx_opmode_oneshot_wait)
+    self.wheel_fl_handle = self.vr.simxGetObjectHandle('FrontLeftWheel_respondable', vrep.simx_opmode_oneshot_wait)
+    self.wheel_fr_handle = self.vr.simxGetObjectHandle('FrontRightWheel_respondable', vrep.simx_opmode_oneshot_wait)
 
     self.steer_fl_handle = self.vr.simxGetObjectHandle('FrontLeftSteering', vrep.simx_opmode_oneshot_wait)
     self.steer_fr_handle = self.vr.simxGetObjectHandle('FrontRightSteering', vrep.simx_opmode_oneshot_wait)
@@ -91,6 +93,15 @@ class Car(object):
     """
     return self.vr.simxGetObjectVelocity(self.car_handle, 
                                          vrep.simx_opmode_streaming)[0]
+  def get_wheel_velocity(self) -> float:
+    """ returns average of front wheel speeds. GetObjectVelocity returns lin vel,ang vel
+    angular velocity vector in rad/sec
+    """
+    left_vel_vec = self.vr.simxGetObjectVelocity(self.wheel_fl_handle,vrep.simx_opmode_streaming)[1]
+    left_speed = math.sqrt(left_vel_vec[0]**2 + left_vel_vec[1]**2 + left_vel_vec[2]**2) / self.speed_factor
+    right_vel_vec = self.vr.simxGetObjectVelocity(self.wheel_fr_handle,vrep.simx_opmode_streaming)[1]
+    right_speed = math.sqrt(right_vel_vec[0]**2 + right_vel_vec[1]**2 + right_vel_vec[2]**2) / self.speed_factor
+    return (left_speed + right_speed)/2.0
 
   def get_steering_angle(self) -> float:
     """Returns the car's steering angle in degrees.

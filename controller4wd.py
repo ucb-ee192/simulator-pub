@@ -79,6 +79,9 @@ class SimulationAssignment():
                velocity control).
         csvfile -- Optional to log data. None to disable.
     """
+     # Constant speed for now. You can tune this and/or implement advanced controllers.
+    #car.set_speed(self.target_speed)
+    
     sim_time = car.get_sim_time()
     dt = sim_time - self.last_sim_time
     self.last_sim_time = sim_time

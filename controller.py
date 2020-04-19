@@ -38,7 +38,7 @@ class SimulationAssignment():
     # You can use additional cameras, but will have to add then in the V-REP scene
     # and bind the handle in Car.__init__. The V-REP remote API doesn't provide a
     # way to instantiate additional vision sensors.
-    car.set_line_camera_parameters(0, height=0.3, orientation=60, fov=90)
+    car.set_line_camera_parameters(0, height=0.3, orientation=40, fov=90)
     car.set_line_camera_parameters(1, height=0.4, orientation=15, fov=60)
     # You should measure the steering servo limit and set it here.
     # A more accurate approach would be to implement servo slew limiting.
@@ -111,7 +111,7 @@ class SimulationAssignment():
 
     # Proportional gain in steering control (degrees) / lateral error (meters)
     kp = 200
-    kd = 0 # deg per m/s
+    kd = 20 # deg per m/s
     ki = 0 # deg per m-s
     steer_angle = -kp * lat_err - kd * lat_vel - ki * self.int_err
 
@@ -123,19 +123,21 @@ class SimulationAssignment():
 
     # Print out and record debugging info
     pos = car.get_position()
-    vel_vector = car.get_velocity()
-    vel = math.sqrt(vel_vector[0]**2 + vel_vector[1]**2 + vel_vector[2]**2)
+ #   vel_vector = car.get_velocity()
+ #   vel = math.sqrt(vel_vector[0]**2 + vel_vector[1]**2 + vel_vector[2]**2)
+    vel = car.get_wheel_velocity()
+    
     print('t=%6.3f (x=%5.2f, y=%5.2f, sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%3.1f'
           % (sim_time, pos[0], pos[1], vel,
              lat_err, self.int_err, (line0_err or 0), steer_angle))
   
     if csvfile is not None:
       csvfile.writerow({'t': sim_time,
-                        'x': pos[0], 'y': pos[1],
+                      #  'x': pos[0], 'y': pos[1],
                         'linescan': line_camera_image0,
                         'line_pos': line0_err + 63,  # needs to be in camera pixels so overlaid plots work
-                        'linescan_far': line_camera_image1,
-                        'line_pos_far': line1_err + 63,
+                        # 'linescan_far': line_camera_image1,
+                        # 'line_pos_far': line1_err + 63,
                         'speed': vel,
                         'lat_err': lat_err,
                         'steer_angle': steer_angle,
@@ -159,7 +161,9 @@ if __name__ == "__main__":
                       help='overwrite the specified csvfile without warning')
   parser.add_argument('--laps', metavar='l', type=int, default=1,
                       help="""Number of laps to run, default of 1. 0 means infinite.""")
-  parser.add_argument('--velocity', metavar='v', type=float, default=2.0,
+  parser.add_argument('--maxtime', metavar='maxtime', type=float, default=60.0,
+                      help='number of control iterations to run')
+  parser.add_argument('--velocity', metavar='v', type=float, default=10.0,
                      help="""Set the Velocity, in m/s.""")
   args = parser.parse_args()
 
@@ -210,6 +214,9 @@ if __name__ == "__main__":
       while not done:
         assignment.control_loop(vr, car, csvfile)
         finish_tripped = wire.check_tripped()
+        if assignment.last_sim_time > args.maxtime:
+            done = True
+            print("Exceeded maxtime. Simulation stopped.")
         if finish_tripped:
           completed_laps += 1
           if completed_laps > 0:  # discard the first finish line crossing, which happens at the start
