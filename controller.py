@@ -40,6 +40,7 @@ class SimulationAssignment():
     # way to instantiate additional vision sensors.
     car.set_line_camera_parameters(0, height=0.3, orientation=40, fov=90)
     car.set_line_camera_parameters(1, height=0.4, orientation=15, fov=60)
+
     # You should measure the steering servo limit and set it here.
     # A more accurate approach would be to implement servo slew limiting.
     car.set_steering_limit(30)
@@ -98,8 +99,7 @@ class SimulationAssignment():
 
     # line camera has 0.7 m field of view
     lat_err = -(np.float(line0_err)/128)*0.7  # pixel to meter conversion
-   
-    
+
     if dt > 0.0:
       lat_vel = (lat_err - self.old_lat_err)/dt
     else:
@@ -110,12 +110,12 @@ class SimulationAssignment():
     self.int_err = self.int_err + dt*lat_err
 
     # Proportional gain in steering control (degrees) / lateral error (meters)
-    kp = 200
-    kd = 20 # deg per m/s
-    ki = 0 # deg per m-s
-    steer_angle = -kp * lat_err - kd * lat_vel - ki * self.int_err
+    kp = 200  # deg per m
+    kd = 20  # deg per m/s
+    ki = 0  # deg per m-s
+    target_steer_angle = -kp * lat_err - kd * lat_vel - ki * self.int_err
 
-    steer_angle = car.set_steering(steer_angle, dt)  # use set_steering to include servo slew rate limit
+    steer_angle = car.set_steering(target_steer_angle, dt)  # use set_steering to include servo slew rate limit
     # steer_angle = car.set_steering_fast(steer_angle,dt)  # use set_steering_fast for no delay
     
     # Constant speed for now. You can tune this and/or implement advanced controllers.
@@ -123,25 +123,22 @@ class SimulationAssignment():
 
     # Print out and record debugging info
     pos = car.get_position()
- #   vel_vector = car.get_velocity()
- #   vel = math.sqrt(vel_vector[0]**2 + vel_vector[1]**2 + vel_vector[2]**2)
     vel = car.get_wheel_velocity()
-    
-    print('t=%6.3f (x=%5.2f, y=%5.2f, sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%3.1f'
-          % (sim_time, pos[0], pos[1], vel,
-             lat_err, self.int_err, (line0_err or 0), steer_angle))
-  
+
+    print('\rt=%6.2f (sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%5.1f'
+          % (sim_time, vel, lat_err, self.int_err, (line0_err or 0), steer_angle),
+          end='')
+
     if csvfile is not None:
-      csvfile.writerow({'t': sim_time,
-                      #  'x': pos[0], 'y': pos[1],
-                        'linescan': line_camera_image0,
-                        'line_pos': line0_err + 63,  # needs to be in camera pixels so overlaid plots work
-                        # 'linescan_far': line_camera_image1,
-                        # 'line_pos_far': line1_err + 63,
-                        'speed': vel,
-                        'lat_err': lat_err,
-                        'steer_angle': steer_angle,
-                        })
+      csvfile.writerow({
+        't': sim_time,
+        'x': pos[0], 'y': pos[1],
+        'linescan': line_camera_image0,
+        'line_pos': line0_err + 63,  # needs to be in camera pixels so overlaid plots work
+        'speed': vel,
+        'lat_err': lat_err,
+        'steer_angle': steer_angle,
+      })
 
 
 if __name__ == "__main__":
@@ -155,7 +152,7 @@ if __name__ == "__main__":
   parser.add_argument('--restart', metavar='r', type=bool, default=False,
                       help="""whether to restart the simulation if a simulation
                       is currently running""")
-  parser.add_argument('--csvfile', metavar='c', default='car_data.csv',
+  parser.add_argument('--csvfile', metavar='c', default='car_data',
                       help='csv filename to log to')
   parser.add_argument('--csvfile_overwrite', metavar='csvfile_overwrite', type=bool, default=True,
                       help='overwrite the specified csvfile without warning')
@@ -195,7 +192,7 @@ if __name__ == "__main__":
     success = False
     while not success:
       try:
-        car.get_sim_time()
+        sim_start_time = car.get_sim_time()
         success = True
       except vrepInterface.VRepAPIError:
         print("waiting for simulation start")
@@ -206,23 +203,33 @@ if __name__ == "__main__":
     
     csvfile = None
     if args.csvfile:
-      csvfile = SimpleCsvDictWriter(args.csvfile)
+      csvfile = SimpleCsvDictWriter(args.csvfile + '_lap0.csv')
 
     try:
       done = False
       completed_laps = -1
+      lap_start_time = -1.0
       while not done:
         assignment.control_loop(vr, car, csvfile)
         finish_tripped = wire.check_tripped()
         if assignment.last_sim_time > args.maxtime:
             done = True
-            print("Exceeded maxtime. Simulation stopped.")
+            print("exceeded maxtime")
         if finish_tripped:
           completed_laps += 1
           if completed_laps > 0:  # discard the first finish line crossing, which happens at the start
-            print("finished lap " + str(completed_laps))
+            print("\nfinished lap %i, lap time: %.2f, total elapsed time: %.2f" %
+                (completed_laps, car.get_sim_time() - lap_start_time, car.get_sim_time() - sim_start_time))
+          else:
+            print("\nstarted lap %i, total elapsed time: %.2f" %
+                (completed_laps + 1, car.get_sim_time() - sim_start_time))
+          lap_start_time = car.get_sim_time()
           if completed_laps >= args.laps and args.laps != 0:
             done = True
+
+          if args.csvfile and csvfile is not None and not done:
+            csvfile.close()
+            csvfile = SimpleCsvDictWriter(args.csvfile + '_lap' + str(completed_laps + 1) + '.csv')
 
         if args.synchronous:
           vr.simxSynchronousTrigger()
