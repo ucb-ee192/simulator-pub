@@ -8,7 +8,6 @@ import os.path
 import numpy as np  # type: ignore
 import vrep  # type: ignore
 import vrepInterface  # type: ignore
-import sys
 from carInterface import Car, Tripwire
 from simpleCsvDict import SimpleCsvDictWriter
 
@@ -166,10 +165,8 @@ if __name__ == "__main__":
 
   # Check that we won't overwrite an existing csvfile before mucking with the
   # simulator.
-  if (args.csvfile is not None and os.path.exists(args.csvfile) 
-      and not args.csvfile_overwrite):
-    print("csvfile '%s' already exists: aborting." % args.csvfile)
-    sys.exit()
+  assert args.csvfile is None or not os.path.exists(args.csvfile + '_lap0.csv') or args.csvfile_overwrite, \
+      "csvfile '%s' already exists: aborting." % (args.csvfile + '_lap0.csv')
 
   # Stop the existing simulation if requested. Not using a separate
   # VRepInterface (and hence VREP API client id) seems to cause crashes.
@@ -187,7 +184,8 @@ if __name__ == "__main__":
       vr.simxSynchronous(1)
 
     car = Car(vr)
-    wire = Tripwire(vr)
+    finish_wire = Tripwire(vr, 'Proximity_sensor_StartLine')
+    stopping_wire = Tripwire(vr, 'Proximity_sensor')
 
     success = False
     while not success:
@@ -211,11 +209,12 @@ if __name__ == "__main__":
       lap_start_time = -1.0
       while not done:
         assignment.control_loop(vr, car, csvfile)
-        finish_tripped = wire.check_tripped()
+
         if assignment.last_sim_time > args.maxtime:
             done = True
             print("exceeded maxtime")
-        if finish_tripped:
+
+        if finish_wire.check_tripped():
           completed_laps += 1
           if completed_laps > 0:  # discard the first finish line crossing, which happens at the start
             print("\nfinished lap %i, lap time: %.2f, total elapsed time: %.2f" %
@@ -226,20 +225,23 @@ if __name__ == "__main__":
           lap_start_time = car.get_sim_time()
           if completed_laps >= args.laps and args.laps != 0:
             done = True
-
           if args.csvfile and csvfile is not None and not done:
             csvfile.close()
             csvfile = SimpleCsvDictWriter(args.csvfile + '_lap' + str(completed_laps + 1) + '.csv')
+
+        if stopping_wire.check_tripped() and completed_laps > 0:
+          print("\ncrossed stopping line, lap+%.2f, total elapsed time: %.2f" %
+              (car.get_sim_time() - lap_start_time, car.get_sim_time() - sim_start_time))        
 
         if args.synchronous:
           vr.simxSynchronousTrigger()
     except KeyboardInterrupt:
       # Allow a keyboard interrupt to break out of the loop while still shutting
       # down gracefully.
-      print("caught keyboard interrupt, terminating control loop")
+      print("\ncaught keyboard interrupt, terminating control loop")
       pass
     finally:
-      print("ending simulation")
+      print("\nending simulation")
       vr.simxStopSimulation(vrep.simx_opmode_oneshot_wait)
 
       if csvfile is not None:
