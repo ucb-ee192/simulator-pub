@@ -223,8 +223,6 @@ if __name__ == "__main__":
             print("\nstarted lap %i, total elapsed time: %.2f" %
                 (completed_laps + 1, car.get_sim_time() - sim_start_time))
           lap_start_time = car.get_sim_time()
-          if completed_laps >= args.laps and args.laps != 0:
-            done = True
           if args.csvfile and csvfile is not None and not done:
             csvfile.close()
             csvfile = SimpleCsvDictWriter(args.csvfile + '_lap' + str(completed_laps + 1) + '.csv')
@@ -232,6 +230,8 @@ if __name__ == "__main__":
         if stopping_wire.check_tripped() and completed_laps > 0:
           print("\ncrossed stopping line, lap+%.2f, total elapsed time: %.2f" %
               (car.get_sim_time() - lap_start_time, car.get_sim_time() - sim_start_time))        
+          if completed_laps >= args.laps and args.laps != 0:
+            done = True
 
         if args.synchronous:
           vr.simxSynchronousTrigger()
