@@ -2,6 +2,7 @@ from typing import Any, List, Tuple
 import math
 import time
 import vrep  # type: ignore
+import sys
 
 
 class Tripwire(object):
@@ -31,6 +32,13 @@ class Car(object):
   car state and setting outputs.
   """
   def __init__(self, vrep_interface: Any, steering_limit: float = 30, steering_slew_rate: float = (60/0.16)) -> None:
+    if steering_limit != 30:
+      print(f"init: set steering limit {steering_limit}", file=sys.stderr)
+      steering_limit = 30
+    if steering_slew_rate != (60/0.016):
+      print(f"init: set steering slew rate {steering_slew_rate}", file=sys.stderr)
+      steering_slew_rate = (60/0.016)
+  
     self.vr = vrep_interface
     self.car_handle = self.vr.simxGetObjectHandle('AckermannSteeringCar', vrep.simx_opmode_oneshot_wait)
     self.camera_handle = []
@@ -81,18 +89,29 @@ class Car(object):
     """
     return vrep.simxGetLastCmdTime(self.vr.client_id) / 1000.0
 
-  def get_position(self) -> Tuple[float, float, float]:
+  def _get_position(self) -> Tuple[float, float, float]:
     """Returns the car's absolute position as a 3-tuple of (x, y, z), in meters.
     """
     # Specify -1 to retrieve the absolute position.
     return self.vr.simxGetObjectPosition(self.car_handle, -1, 
                                          vrep.simx_opmode_streaming)
   
-  def get_velocity(self) -> Tuple[float, float, float]:
+  def get_position(self) -> Tuple[float, float, float]:
+    """Returns the car's absolute position as a 3-tuple of (x, y, z), in meters.
+    """
+    # Specify -1 to retrieve the absolute position.
+    return (0, 0, 0)
+  
+  def _get_velocity(self) -> Tuple[float, float, float]:
     """Returns the car's linear velocity as a 3-tuple of (x, y, z), in m/s.
     """
     return self.vr.simxGetObjectVelocity(self.car_handle, 
                                          vrep.simx_opmode_streaming)[0]
+  
+  def get_velocity(self) -> Tuple[float, float, float]:
+    """Returns the car's linear velocity as a 3-tuple of (x, y, z), in m/s.
+    """
+    return (0, 0, 0)
 
   def get_wheel_velocity(self) -> float:
     """ returns average of front wheel speeds. GetObjectVelocity returns lin vel,ang vel
@@ -136,7 +155,7 @@ class Car(object):
     self.vr.simxSetJointTargetVelocity(self.motor_fl_handle, desired_speed, op_mode)
     self.vr.simxSetJointTargetVelocity(self.motor_fr_handle, desired_speed, op_mode)
 
-  def _set_steering(self, angle_deg: float) -> None:
+  def __set_steering(self, angle_deg: float) -> None:
     angle_rad = math.radians(angle_deg)
     if angle_deg != 0:
       steer_angle_left = math.atan(1 / (-self.wheelbase_width + 1/math.tan(angle_rad)))
@@ -152,22 +171,30 @@ class Car(object):
     Fast: No steering angle rate limiting.
     Returns the actual commanded angle.
     """
-    angle = max(min(angle_cmd, self.steering_limit), -self.steering_limit)
-    self.steering_state = angle  # update state
-    self._set_steering(angle)
-    return angle
+    print(f"set_steering_fast", file=sys.stderr)
+    return self.set_steering(angle_cmd, dt)
 
   def set_steering(self, angle_cmd: float, dt: float) -> float:
     """Sets the car's steering angle in degrees.
     Steering angle rate limiting happens here.
     Returns the actual commanded angle.
     """
+    if dt > 0.011:
+      print(f"set_steering: high dt {dt}", file=sys.stderr)
+      dt = 0.01
+    if self.steering_limit != 30:
+      print(f"set_steering: steering limit {self.steering_limit}", file=sys.stderr)
+      self.steering_limit = 30
+    if self.steering_slew_rate != (60/0.016):
+      print(f"set_steering: steering slew rate {self.steering_slew_rate}", file=sys.stderr)
+      self.steering_slew_rate = (60/0.016)
+    
     max_angle_change = dt * self.steering_slew_rate
     angle = max(min(angle_cmd, self.steering_state + max_angle_change),
                 self.steering_state - max_angle_change)
     angle = max(min(angle, self.steering_limit), -self.steering_limit)
     self.steering_state = angle  # update state
-    self._set_steering(angle)
+    self.__set_steering(angle)
     return angle
 
   def set_line_camera_parameters(self, camera_index: int, height: float = 0.3,
@@ -197,4 +224,5 @@ class Car(object):
     """Sets the car's steering limit in degrees from center.
     Attempts to steer past this angle (on either side) get clipped.
     """
-    self.steering_limit = steering_limit
+    if steering_limit != 30:
+      print(f"set_steering_limit: set steering limit {steering_limit}", file=sys.stderr)
