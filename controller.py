@@ -121,7 +121,10 @@ class SimulationAssignment():
     car.set_speed(self.target_speed)
 
     # Print out and record debugging info
+    # car.get_position is only for debugging/analysis. Absolute position information
+    # is not available for control or memorization purposes
     pos = car.get_position()
+    #############################
     vel = car.get_wheel_velocity()
 
     print('\rt=%6.2f (sp=%5.2f): lat_err=%5.2f, int_err=%5.2f, line0_err=%3i, steer_angle=%5.1f'
