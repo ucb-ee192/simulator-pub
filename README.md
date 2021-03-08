@@ -11,8 +11,8 @@ You may also add additional items to `csvfile.writerow` to dump more useful data
 
 ### Running
 1. You will need to [download and install V-REP 3.6.2](https://www.coppeliarobotics.com/previousVersions).
-1. With a [track file](tracks/) open in V-REP, start `controller.py`.
-   This can be in a separate terminal.
+1. With a [track file](tracks/) open in V-REP, start `controller.py`. cory-track-fastcar.ttt and ee192_Round2 work.
+   This can be in a separate terminal. 
    - If `controller.py` refuses to start because it cannot find the shared library, you will have to copy the relevant shared library file from your local V-REP installation directory into the folder where `controller.py` is.
 1. A few warnings will pop up in the simulator after starting - click through these, and the simulation should resume.
 1. By default, the simulation will run one lap and exit.
