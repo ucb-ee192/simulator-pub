@@ -10,17 +10,17 @@ Feel free to change constants or add additional state variables as needed.
 You may also add additional items to `csvfile.writerow` to dump more useful data, as long as the keys are kept constant every iteration.
 
 ### Running
-1. You will need to [download and install V-REP](https://www.coppeliarobotics.com/previousVersions).
+1. You will need to [download and install V-REP 3.6.2](https://www.coppeliarobotics.com/previousVersions).
 1. With a [track file](tracks/) open in V-REP, start `controller.py`.
    This can be in a separate terminal.
    - If `controller.py` refuses to start because it cannot find the shared library, you will have to copy the relevant shared library file from your local V-REP installation directory into the folder where `controller.py` is.
 1. A few warnings will pop up in the simulator after starting - click through these, and the simulation should resume.
-1. By default, the simulation will run on lap and exit.
-   You can change this by passing in `--laps` into `controller.py`, with `0` meaning infinite. 
-1. Data will be dumped by default in `car_data.csv`, which you can visualize (plot) using [log-visualizer.py in the telemetry repository](https://github.com/ucb-ee192/telemetry/blob/master/client-py/log-visualizer.py).
+1. By default, the simulation will run one lap and exit.
+   You can change this by passing in `--laps` into `controller.py`, with `0` meaning infinite. You can stop the simulation using the square stop button in V-rep.
+1. Data will be dumped by default in `car_data_lapX.csv`, which you can visualize (plot) using [log-visualizer.py in the telemetry repository](https://github.com/ucb-ee192/telemetry/blob/master/client-py/log-visualizer.py).
    This invocation is a starting point assuming stock CSV output: `python log-visualizer.py --merge linescan,line_pos --merge linescan_far,line_pos_far --merge x,y car_data.csv`
 1. You can also plot the X-Y (car track) data using `xyplot.py`.
-   This invocation is a starting point assuming stock CSV output: `python xyplot.py car_data.csv`
+   This invocation is a starting point assuming stock CSV output: `python xyplot.py car_data_lapX.csv`
    This script an optional `-z` column name argument to color-code (using absolute value of the data) the plot, defaulting to `steer_angle`.
 
 
