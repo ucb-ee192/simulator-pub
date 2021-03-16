@@ -177,7 +177,7 @@ if __name__ == "__main__":
     with vrepInterface.VRepInterface.open() as vr:
       vr.simxStopSimulation(vrep.simx_opmode_oneshot_wait)
 
-  # This needs not be in the main body, or the API throws an exception a split second after simulation start.
+   # This needs not be in the main body, or the API throws an exception a split second after simulation start.
   with vrepInterface.VRepInterface.open() as vr:
     ret = vr.simxStartSimulation(vrep.simx_opmode_oneshot_wait)
 
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     car = Car(vr)
     finish_wire = Tripwire(vr, 'Proximity_sensor_StartLine')
     stopping_wire = Tripwire(vr, 'Proximity_sensor')
-
+ 
     success = False
     while not success:
       try:
@@ -238,6 +238,10 @@ if __name__ == "__main__":
 
         if args.synchronous:
           vr.simxSynchronousTrigger()
+    except vrepInterface.VRepAPIError:
+        print("\n VRepAPIError- simulation stopped. Setting speed 0\n")
+        car.set_speed(0.0)  # set to zero, otherwise car will lunge at next sim start
+        pass
     except KeyboardInterrupt:
       # Allow a keyboard interrupt to break out of the loop while still shutting
       # down gracefully.
